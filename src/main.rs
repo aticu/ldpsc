@@ -8,17 +8,12 @@ extern crate tempfile;
 
 mod c_parser;
 
-use clap::{Arg, App};
+use clap::{App, Arg};
 use std::{
     fs::File,
-    io::{Read,
-        self,
-        stdin,
-        stdout,
-        Write
-    },
+    io::{self, stdin, stdout, Read, Write},
     path::Path,
-    process::Command
+    process::Command,
 };
 use tempfile::Builder;
 
@@ -28,8 +23,8 @@ fn main() -> Result<(), String> {
     let config = get_config();
 
     // Read and transform the file.
-    let file_content = read_file(&config.input_file)
-        .map_err(|err| format!("{}: {}", config.input_file, err))?;
+    let file_content =
+        read_file(&config.input_file).map_err(|err| format!("{}: {}", config.input_file, err))?;
     let transformed_content = c_parser::transform_file(&file_content, &config)?;
 
     // Output the C code if necessary.
@@ -40,23 +35,28 @@ fn main() -> Result<(), String> {
     }
 
     // Create a temporary directory.
-    let tmp_dir = Builder::new().prefix("ldpsc").tempdir()
+    let tmp_dir = Builder::new()
+        .prefix("ldpsc")
+        .tempdir()
         .map_err(|err| format!("Error creating temp directory: {}", err))?;
 
     // Write the C file in the temporary directory.
     let mut output_path = tmp_dir.path().to_path_buf();
     output_path.push("output.c");
-    write_file(output_path.to_str().unwrap(), transformed_content.as_bytes())
-        .map_err(|err| format!("{:?}: {}", output_path, err))?;
-    
+    write_file(
+        output_path.to_str().unwrap(),
+        transformed_content.as_bytes(),
+    ).map_err(|err| format!("{:?}: {}", output_path, err))?;
+
     // Run the C compiler.
     let so_path = run_cc(&config, tmp_dir.path(), &output_path)?;
 
     // Copy the shared object if necessary.
     if config.create_shared_object {
-        write_file(&config.output_file, &read_file(&so_path)
-                .map_err(|err| format!("{}: {}", &so_path, err))?)
-            .map_err(|err| format!("{}: {}", config.output_file, err))?;
+        write_file(
+            &config.output_file,
+            &read_file(&so_path).map_err(|err| format!("{}: {}", &so_path, err))?,
+        ).map_err(|err| format!("{}: {}", config.output_file, err))?;
         return Ok(());
     }
 
@@ -87,7 +87,10 @@ fn run_cc(config: &Config, tmp_dir: &Path, output_path: &Path) -> Result<String,
         Err(format!("{:?} failed", command))?;
     }
 
-    Ok(so_path.to_str().expect("Path could not be converted to string.").to_string())
+    Ok(so_path
+        .to_str()
+        .expect("Path could not be converted to string.")
+        .to_string())
 }
 
 /// Runs the given command preloading the given library.
@@ -103,16 +106,18 @@ fn run_command(config: &Config, preload_path: &str) -> Result<(), String> {
             command.arg(&arg);
         }
 
-        command
-            .env("LD_PRELOAD", preload_path);
+        command.env("LD_PRELOAD", preload_path);
 
         let status = command
             .status()
             .map_err(|err| format!("Running {:?} failed: {}", command, err))?;
-        
+
         if !status.success() {
             if let Some(exit_code) = status.code() {
-                Err(format!("{:?} finished unsuccessfully with exit code {}", command, exit_code))
+                Err(format!(
+                    "{:?} finished unsuccessfully with exit code {}",
+                    command, exit_code
+                ))
             } else {
                 Err(format!("{:?} finished unsuccessfully", command))
             }
@@ -164,7 +169,7 @@ pub struct Config {
     /// Whether to stop after creating the shared object file.
     create_shared_object: bool,
     /// The command to run.
-    command: Option<Vec<String>>
+    command: Option<Vec<String>>,
 }
 
 /// Returns a configuration for this program.
@@ -231,9 +236,8 @@ fn get_config() -> Config {
         debug_output: matches.value_of("debug-output").unwrap_or("-").to_string(),
         c_compiler: matches.value_of("c-compiler").unwrap_or("cc").to_string(),
         create_shared_object: matches.is_present("create-so"),
-        command: matches.values_of("command")
-            .map(|cmds| cmds
-                .map(|cmd| cmd.to_string())
-                .collect::<Vec<String>>())
+        command: matches
+            .values_of("command")
+            .map(|cmds| cmds.map(|cmd| cmd.to_string()).collect::<Vec<String>>()),
     }
 }

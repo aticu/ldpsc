@@ -1,16 +1,9 @@
 //! This module parses C Code.
 
-use nom::{
-    self,
-    multispace
-};
 use self::basic::identifier;
-use std::{
-    fmt,
-    fmt::Write,
-    str::from_utf8
-};
 use super::Config;
+use nom::{self, multispace};
+use std::{fmt, fmt::Write, str::from_utf8};
 
 mod basic;
 
@@ -25,7 +18,7 @@ pub fn transform_file(content: &[u8], config: &Config) -> Result<String, String>
             Ok((new_input, result)) => {
                 input = new_input;
                 functions.push(result);
-            },
+            }
             Err(nom::Err::Incomplete(_)) => break,
             Err(e) => {
                 Err(format!("Parser error: {:?}", e))?;
@@ -57,7 +50,7 @@ enum TypeQualifier {
     /// The volatile type qualifier.
     Volatile,
     /// The _Atomic type qualifier.
-    Atomic
+    Atomic,
 }
 
 impl fmt::Display for TypeQualifier {
@@ -66,13 +59,13 @@ impl fmt::Display for TypeQualifier {
             TypeQualifier::Const => write!(f, "const"),
             TypeQualifier::Restrict => write!(f, "restrict"),
             TypeQualifier::Volatile => write!(f, "volatile"),
-            TypeQualifier::Atomic => write!(f, "_Atomic")
+            TypeQualifier::Atomic => write!(f, "_Atomic"),
         }
     }
 }
 
 /// Represents a type in C.
-/// 
+///
 /// # Note
 /// This does not yet correspond to the C standard and just supports a subset of possible types.
 #[derive(Debug)]
@@ -82,7 +75,7 @@ struct Type {
     /// The specifier used for this type.
     specifier: String,
     /// The amount of pointer indirections on this type.
-    pointer: usize
+    pointer: usize,
 }
 
 impl fmt::Display for Type {
@@ -113,7 +106,7 @@ impl Type {
             ("int", 0) => "%d",
             ("size_t", 0) => "%zd",
             (_, 0) => "{Unknown Type: %d}",
-            (_, _) => "%p"
+            (_, _) => "%p",
         }
     }
 
@@ -121,7 +114,7 @@ impl Type {
     fn is_void(&self) -> bool {
         match (&self.specifier[..], self.pointer) {
             ("void", 0) => true,
-            _ => false
+            _ => false,
         }
     }
 }
@@ -134,7 +127,7 @@ struct Function {
     /// The name identifying the function.
     name: String,
     /// The parameters of the function.
-    parameters: Vec<(Type, String)>
+    parameters: Vec<(Type, String)>,
 }
 
 impl Function {
@@ -159,7 +152,7 @@ impl Function {
                 write!(f, " ")?;
             }
 
-            write!(f, "{}",  parameter.1)?;
+            write!(f, "{}", parameter.1)?;
 
             if i != self.parameters.len() - 1 {
                 write!(f, ", ")?;
@@ -248,7 +241,7 @@ impl Function {
 }
 
 /// Parses a C function.
-/// 
+///
 /// # Note
 /// This does not yet correspond to the C standard and just supports a subset of possible functions.
 named!(function<&[u8], Function>,
@@ -289,7 +282,7 @@ named!(function<&[u8], Function>,
 );
 
 /// Parses a C type.
-/// 
+///
 /// # Note
 /// This does not yet correspond to the C standard and just supports a subset of possible types.
 named!(parse_type<&[u8], Type>,
